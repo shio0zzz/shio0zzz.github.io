@@ -206,7 +206,6 @@ body{
   color:var(--text);
 }
 
-/* Icon list / actions */
 #list{
   display:flex;
   flex-direction:row;
@@ -276,7 +275,6 @@ body{
   background:#0a0b0d;
 }
 
-/* Keep #box auto-height as you already set */
 #box{
   width:480px;
   height:auto;
