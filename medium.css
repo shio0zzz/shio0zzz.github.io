@@ -1,111 +1,330 @@
-@font-face
-{
-    font-family: "Aller";
-    src: url("./assets/Aller_Regular.ttf");
+@font-face {
+  font-family: "CONSOLA";
+  src: url(./assets/CONSOLA.TTF)
 }
 
-*
-{
-	box-sizing: border-box;
+/* ---------- Theme Tokens (High-Contrast Dark) ---------- */
+:root{
+  --bg:#0b0c0e;               /* near-black background */
+  --panel:#0f1115;            /* deep panel */
+  --panel-elev:#14171c;       /* slightly lifted panel */
+  --text:#e8e8e8;             /* bright primary text */
+  --muted:#b3b8bf;            /* secondary text with AA contrast */
+  --accent:#23a0ff;           /* vivid cyan/blue */
+  --accent-2:#7fd3ff;         /* lighter cyan for gradients */
+  --purple:#b38cff;           /* alt accent */
+  --success:#5af2c8;
+  --warn:#fff3a3;
+  --error:#ff5c5c;
+
+  --radius:16px;
+  --shadow-lg:0 14px 36px rgba(0,0,0,.6);
+  --ring:0 0 0 1px rgba(255,255,255,.08) inset;
 }
 
-body
-{
-	margin: 0;
-	top: 0;
-	overflow: auto;
-    background-color: #677096;
-	font-family: "Aller", monospace;
-    color: #ffffff;
+/* ---------- Resets ---------- */
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
+
+body{
+  margin:0;
+  overflow:auto;
+  color:var(--text);
+  background:
+    radial-gradient(1100px 650px at -10% -10%, rgba(35, 149, 255, 0.185) 20%, transparent 60%),
+    radial-gradient(950px 520px at 110% 110%, rgba(232, 140, 255, 0.267) 0%, transparent 60%),
+    var(--bg);
+  font-family: "Cascadia Code","Fira Code","JetBrains Mono","CONSOLA",monospace;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
-#container
-{
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Text selection: high-contrast */
+::selection{
+  background:rgba(35,160,255,.45);
+  color:#0b0c0e;
 }
 
-#article
-{
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+/* Custom scrollbars with stronger contrast */
+*::-webkit-scrollbar{ width:10px; height:10px; }
+*::-webkit-scrollbar-track{ background:#0d0f12; }
+*::-webkit-scrollbar-thumb{
+  background:#2a2f36;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.08);
+}
+*::-webkit-scrollbar-thumb:hover{ background:#3a414a; }
+
+/* ---------- Layout ---------- */
+#container{
+  min-height:100svh;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
 }
 
-#avatar
-{
-    width: 275px;
-    height: 400px;
-    border-radius: 15px;
-    object-fit: cover;
+#article{
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;
+  background:linear-gradient(180deg, var(--panel) 0%, var(--panel-elev) 100%);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);
+  outline:1px solid rgba(255,255,255,.08);
+  overflow:hidden;
 }
 
-#box
-{
-    width: 450px;
-    height: 350px;
-    background-color: #A6B1E1;
-    border-radius: 0px 15px 15px 0px;
+/* ---------- Media / Visuals ---------- */
+#avatar{
+  width:275px;
+  height:400px;
+  object-fit:cover;
+  border-radius:12px 0 0 12px;
+  filter:saturate(1.06) contrast(1.06);
+  border-right:1px solid rgba(255,255,255,.10);
+  background:#0a0b0d;
 }
 
-#content
-{
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+/* Panel */
+#box {
+  width: 480px;
+  height: auto;         /* ← auto height */
+  min-height: 400px;    /* optional: ensures a minimum size */
+  background:linear-gradient(180deg, rgba(20,23,28,.92), rgba(17,19,23,.92));
+  border-left:3px solid var(--accent);
+  border-radius:0 var(--radius) var(--radius) 0;
+  box-shadow:var(--ring);
+  backdrop-filter:blur(10px);
 }
 
-#header
-{
-    font-size: 32px;
-    font-weight: bold;
+/* Content */
+#content{
+  padding:18px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  line-height:1.55;
 }
 
-#line
-{
-    position: relative;
-    width: 100%;
-    height: 2px;
-    background-color: #ffffff;
+/* Header with a brighter gradient */
+#header{
+  font-size:28px;
+  font-weight:700;
+  letter-spacing:.3px;
+  background:linear-gradient(90deg, var(--accent), var(--accent-2) 58%, var(--purple) 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow:0 0 22px rgba(127,211,255,.25);
 }
 
-#description
-{
-    position: relative;
-    display: flex;
-    flex-direction: row;
-    gap: 150px;
-    font-size: 20px;
+
+
+/* LED-style divider, slower and more purple–blue weighted */
+/* Tokyo Night palette (add once, e.g., in :root) */
+:root{
+  --tn-blue:   #7aa2f7;
+  --tn-cyan:   #89ddff;
+  --tn-purple: #bb9af7;
+  --tn-red:    #f7768e;
+  --tn-orange: #ff9e64;
+  --tn-yellow: #e0af68;
+  --tn-green:  #9ece6a;
 }
 
-#about
-{
-    position: relative;
-    font-size: 20px;
+/* Animated RGB LED-style divider */
+#line{
+  position: relative;
+  width: 100%;
+  height: 3px;                 /* a hair thicker for glow */
+  border-radius: 999px;
+  overflow: hidden;
+
+  /* Multi-stop gradient that loops colors; duplicated start color to avoid jump */
+  background: linear-gradient(
+    90deg,
+    var(--tn-blue) 0%,
+    var(--tn-purple) 12.5%,
+    var(--tn-red) 25%,
+    var(--tn-orange) 37.5%,
+    var(--tn-yellow) 50%,
+    var(--tn-green) 62.5%,
+    var(--tn-cyan) 75%,
+    var(--tn-blue) 87.5%,
+    var(--tn-purple) 100%
+  );
+
+  /* Make the gradient “scroll” across the bar */
+  background-size: 200% 100%;
+  animation: rgb-flow 8s linear infinite;
+
+  /* Soft outer glow to feel like LEDs */
+  box-shadow:
+    0 0 10px rgba(122,162,247,.28),
+    0 0 18px rgba(187,154,247,.22);
 }
 
-#list
-{
-    display: flex;
-    flex-direction: row;
-    gap: 25px;
-    justify-content: center;
+/* Optional subtle white shimmer sweeping across */
+#line::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  mix-blend-mode: screen;
+  transform: translateX(-30%);
+  animation: shimmer 2.8s linear infinite;
+  opacity:.3;
 }
 
-#contact
-{
-    position: relative;
-    bottom: -25px;
-    width: 50px;
-    height: 50px;
-    transition: transform 0.5s;
+@keyframes rgb-flow{
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 
-#contact:hover
-{
-    transform: scale(1.1);
-    cursor: pointer;
+@keyframes shimmer{
+  0%   { transform: translateX(-30%); }
+  100% { transform: translateX(130%); }
 }
+
+
+/* Two-column description */
+#description{
+  position:relative;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:28px 56px;
+  font-size:16px;
+  color:var(--muted);
+}
+
+/* About block */
+#about{
+  position:relative;
+  font-size:16px;
+  color:var(--text);
+}
+
+/* Icon list / actions */
+#list{
+  display:flex;
+  flex-direction:row;
+  gap:22px;
+  justify-content:center;
+  margin-top:6px;
+}
+
+#contact{
+  position:relative;
+  bottom:auto;
+  width:48px;
+  height:48px;
+  border-radius:10px;
+  background:linear-gradient(180deg, #0f1115, #0b0c0e);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.06) inset,
+    0 12px 22px rgba(0,0,0,.6);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition: transform .22s ease, box-shadow .22s ease, filter .22s ease, outline-color .22s ease;
+  outline:1px solid rgba(255,255,255,.10);
+}
+#contact:hover,
+#contact:focus-visible{
+  transform: translateY(-2px) scale(1.07);
+  box-shadow:
+    0 0 0 2px rgba(35,160,255,.45),
+    0 22px 36px rgba(0,0,0,.7);
+  filter: drop-shadow(0 0 12px rgba(35,160,255,.38)) saturate(1.15);
+  cursor:pointer;
+}
+
+/* ---------- Accessibility & Motion ---------- */
+#contact:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  border-radius:12px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important; }
+}
+
+/* Turn the card into a 2-column grid so both sides are equal height */
+#article{
+  display:grid;                              /* was: flex */
+  grid-template-columns: 275px minmax(0,1fr);/* left fixed, right flexible */
+  align-items:stretch;
+  background:linear-gradient(180deg, var(--panel) 0%, var(--panel-elev) 100%);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);
+  outline:1px solid rgba(255,255,255,.08);
+  overflow:hidden;
+}
+
+/* Make the image fill the left grid column’s height */
+#avatar{
+  width:100%;
+  height:100%;             /* fills the card height (matches #box) */
+  object-fit:cover;        /* crop without distortion */
+  display:block;           /* avoid inline gaps */
+  border-radius:12px 0 0 12px;
+  filter:saturate(1.06) contrast(1.06);
+  border-right:1px solid rgba(255,255,255,.10);
+  background:#0a0b0d;
+}
+
+/* Keep #box auto-height as you already set */
+#box{
+  width:480px;
+  height:auto;
+  min-height:400px;
+  background:linear-gradient(180deg, rgba(20,23,28,.92), rgba(17,19,23,.92));
+  border-left:3px solid var(--accent);
+  border-radius:0 var(--radius) var(--radius) 0;
+  box-shadow:var(--ring);
+  backdrop-filter:blur(10px);
+}
+
+/* Responsive: stack vertically, give avatar a fixed tall banner height */
+@media (max-width: 960px){
+  #article{
+    grid-template-columns: 1fr;   
+  }
+  #avatar{
+    width:100%;
+    height:280px;                  /* banner height on mobile */
+    border-radius:var(--radius) var(--radius) 0 0;
+    border-right:none;
+    border-bottom:1px solid rgba(255,255,255,.10);
+    object-position:center top;
+  }
+  #box{
+    width:100%;
+    height:auto;
+    border-left:none;
+    border-top:3px solid var(--accent);
+    border-radius:0 0 var(--radius) var(--radius);
+  }
+}
+
+@media (max-width: 520px){
+  #content{ padding:16px; gap:14px; }
+  #header{ font-size:24px; }
+  #list{ gap:14px; }
+}
+
+/*vsc */
+.keyword     { color:#8fb4ff; }
+.variable    { color:#e6e9ff; }
+.operator    { color:#7dd3fc; }
+.string      { color:#fbffd4; } 
+.function    { color:#c7a2ff; }
+.comment     { color:#6a6f95; }
+.punctuation { color:#e6e9ff; }
+
+
+
+

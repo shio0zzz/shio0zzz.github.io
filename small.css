@@ -1,101 +1,135 @@
-@font-face
-{
-    font-family: "Aller";
-    src: url("./assets/Aller_Regular.ttf");
+@font-face {
+  font-family: "CONSOLA";
+  src: url("./assets/CONSOLA.ttf");
 }
 
-*
-{
-	box-sizing: border-box;
+/* ---------- Theme Tokens ---------- */
+:root {
+  --bg:#1e1e1e;
+  --panel:#252526;
+  --panel-elev:#2d2d30;
+  --text:#d4d4d4;
+  --muted:#9aa0a6;
+  --accent:#007acc;
+  --accent-2:#4fc1ff;
+  --purple:#a371f7;
+
+  --radius:16px;
+  --shadow-lg:0 8px 20px rgba(0,0,0,.45);
 }
 
-body
-{
-	margin: 0;
-	top: 0;
-	overflow: auto;
-    background-color: #677096;
-	font-family: "Aller", monospace;
-    color: #ffffff;
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  overflow: auto;
+  font-family: "Cascadia Code","Fira Code","JetBrains Mono","CONSOLA",monospace;
+  color: var(--text);
+  background:
+    radial-gradient(900px 500px at -5% -5%, rgba(0,122,204,.12), transparent 70%),
+    radial-gradient(800px 400px at 105% 105%, rgba(163,113,247,.12), transparent 70%),
+    var(--bg);
 }
 
-#container
-{
-    padding: 25px;
+/* ---------- Layout ---------- */
+#container {
+  padding: 25px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
-#article
-{
-    display: flex;
-    gap: 25px;
-    flex-direction: column;
-    align-items: center;
+#article {
+  display: flex;
+  gap: 25px;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
 }
 
-#avatar
-{
-    width: 50vw;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
+/* ---------- Media / Visuals ---------- */
+#avatar {
+  width: 50vw;
+  max-width: 280px;
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent);
+  box-shadow: var(--shadow-lg);
 }
 
-#box
-{
-    width: 90vw;
-    height: max-content;
-    background-color: #A6B1E1;
-    border-radius: 15px;
+/* Panel box */
+#box {
+  width: 90vw;
+  max-width: 720px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-elev));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border-left: 3px solid var(--accent);
 }
 
-#content
-{
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+#content {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-#header
-{
-    font-size: 24px;
-    font-weight: bold;
+/* ---------- Typography ---------- */
+#header {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 12px rgba(79,193,255,.18);
 }
 
-#line
-{
-    position: relative;
-    width: 100%;
-    height: 2px;
-    background-color: #ffffff;
+#line {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 70%);
+  border-radius: 2px;
 }
 
-#description
-{
-    position: relative;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    font-size: 18px;
+#description {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  color: var(--muted);
 }
 
-#about
-{
-    position: relative;
-    font-size: 16px;
+#about {
+  font-size: 15px;
+  color: var(--text);
 }
 
-#list
-{
-    display: flex;
-    flex-direction: row;
-    gap: 25px;
-    justify-content: center;
+/* ---------- Links / Actions ---------- */
+#list {
+  display: flex;
+  flex-direction: row;
+  gap: 22px;
+  justify-content: center;
 }
 
-#contact
-{
-    position: relative;
-    width: 30px;
-    height: 30px;
+#contact {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2a2a2a, #1f1f1f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 6px 12px rgba(0,0,0,.35);
+  transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+
+#contact:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2px rgba(0,122,204,.35), 0 12px 20px rgba(0,0,0,.5);
+  filter: drop-shadow(0 0 8px rgba(0,122,204,.3));
+  cursor: pointer;
 }
