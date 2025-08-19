@@ -145,7 +145,7 @@ body{
   /* Multi-stop gradient that loops colors; duplicated start color to avoid jump */
   background: linear-gradient(
     90deg,
-    var(--tn-blue) 0%,
+    var(--tn-blue) 5%,
     var(--tn-purple) 12.5%,
     var(--tn-red) 25%,
     var(--tn-orange) 37.5%,
@@ -158,7 +158,7 @@ body{
 
   /* Make the gradient “scroll” across the bar */
   background-size: 200% 100%;
-  animation: rgb-flow 8s linear infinite;
+  animation: rgb-flow 2s linear infinite;
 
   /* Soft outer glow to feel like LEDs */
   box-shadow:
