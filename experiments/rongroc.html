@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Ròng rọc Vật lý - Chữ U Ngược</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #e0e0e0;
+            margin: 0;
+            overflow: hidden;
+        }
+        #controls {
+            margin: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            z-index: 10;
+            width: 350px;
+        }
+        canvas {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+        .label-group { margin-bottom: 10px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .stats { font-size: 0.85em; color: #555; line-height: 1.6; }
+        .highlight { color: #d32f2f; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="controls">
+    <div class="label-group">
+        <label for="massSlider">Khối lượng vật (m): <span id="massVal" class="highlight">10</span> kg</label>
+        <input type="range" id="massSlider" min="1" max="100" value="10">
+    </div>
+    <div class="stats">
+        • Kéo <b>nút xanh</b> bên phải để nâng vật.<br>
+        • Khối lượng càng nặng, lực kéo xuống càng lớn.<br>
+        • Ròng rọc được thiết kế dạng rãnh chữ U ngược.
+    </div>
+</div>
+
+<canvas id="simCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const massSlider = document.getElementById('massSlider');
+    const massValDisplay = document.getElementById('massVal');
+
+    // Cấu hình Canvas
+    canvas.width = 600;
+    canvas.height = 500;
+
+    // Thông số hệ thống
+    let mass = 10;
+    const px = canvas.width / 2; // Vị trí X của tâm ròng rọc
+    const py = 120;             // Vị trí Y của tâm ròng rọc
+    const pr = 40;              // Bán kính ròng rọc
+    
+    // Tổng chiều dài phần dây treo (để tính toán vị trí đối ứng)
+    const totalRopeLength = 500; 
+
+    // Trạng thái
+    let objectY = 350; // Vị trí Y vật treo (bên trái)
+    let handleY = 250; // Vị trí Y tay cầm (bên phải)
+    let velocity = 0;
+    let isDragging = false;
+
+    massSlider.oninput = function() {
+        mass = parseInt(this.value);
+        massValDisplay.innerText = mass;
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // Kiểm tra xem có nhấn vào nút kéo bên phải không
+        const dist = Math.sqrt((mx - (px + pr))**2 + (my - handleY)**2);
+        if (dist < 25) {
+            isDragging = true;
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const rect = canvas.getBoundingClientRect();
+            let my = e.clientY - rect.top;
+            
+            // Giới hạn vùng kéo để dây không bị văng quá xa
+            if (my < py) my = py; 
+            if (my > 450) my = 450;
+
+            handleY = my;
+            // Tính toán vị trí vật dựa trên độ dài dây cố định (Ròng rọc cố định)
+            // L_dây = (objectY - py) + (handleY - py) + (Pi * pr)
+            objectY = totalRopeLength - (handleY - py) + py - (Math.PI * pr);
+            velocity = 0; 
+        }
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // --- 1. Vẽ giá đỡ (Trục treo ròng rọc lên trần) ---
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+
+        // --- 2. Vẽ sợi dây (Hình chữ U ngược) ---
+        // Vẽ dây TRƯỚC để ròng rọc đè lên trên
+        ctx.strokeStyle = '#795548';
+        ctx.lineWidth = 6;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        // Nhánh trái (nối vật)
+        ctx.moveTo(px - pr, objectY);
+        ctx.lineTo(px - pr, py);
+        // Phần vòng cung trên đỉnh ròng rọc
+        ctx.arc(px, py, pr, Math.PI, 0, false);
+        // Nhánh phải (nối tay cầm)
+        ctx.lineTo(px + pr, handleY);
+        ctx.stroke();
+
+        // --- 3. Vẽ bánh xe ròng rọc (Đè lên dây) ---
+        // Vành ngoài
+        ctx.fillStyle = '#9e9e9e';
+        ctx.strokeStyle = '#424242';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(px, py, pr + 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Phần rãnh bên trong (tạo hiệu ứng 3D)
+        ctx.fillStyle = '#bdbdbd';
+        ctx.beginPath();
+        ctx.arc(px, py, pr - 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tâm trục ròng rọc
+        ctx.fillStyle = '#212121';
+        ctx.beginPath();
+        ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- 4. Logic Vật lý (Trọng lực) ---
+        if (!isDragging) {
+            const gravity = mass * 0.015; // Độ khó tăng dần theo m
+            velocity += gravity;
+            objectY += velocity;
+
+            // Cập nhật tay cầm theo vật
+            handleY = totalRopeLength - (objectY - py) + py - (Math.PI * pr);
+
+            // Chạm đất
+            if (objectY > 420) {
+                objectY = 420;
+                velocity = 0;
+                handleY = totalRopeLength - (objectY - py) + py - (Math.PI * pr);
+            }
+            // Chạm đỉnh ròng rọc
+            if (objectY < py + 20) {
+                objectY = py + 20;
+                velocity = 0;
+                handleY = totalRopeLength - (objectY - py) + py - (Math.PI * pr);
+            }
+        }
+
+        // --- 5. Vẽ Vật treo m ---
+        const boxSize = 25 + (mass / 2);
+        ctx.fillStyle = '#1976D2';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(px - pr - boxSize/2, objectY, boxSize, boxSize);
+        ctx.shadowBlur = 0; // Reset shadow
+
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(mass + 'kg', px - pr, objectY + boxSize/2 + 5);
+
+        // --- 6. Vẽ Nút kéo ---
+        ctx.fillStyle = isDragging ? '#f44336' : '#4CAF50';
+        ctx.beginPath();
+        ctx.arc(px + pr, handleY, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 11px Arial';
+        ctx.fillText("KÉO", px + pr, handleY + 4);
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+</script>
+
+</body>
+</html>

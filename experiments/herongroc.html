@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Hệ Pa-lăng (Ròng rọc kép)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #2c3e50;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+        }
+        #ui {
+            margin: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 400px;
+        }
+        canvas {
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            cursor: grab;
+        }
+        .info { font-size: 0.9em; margin-top: 10px; color: #bdc3c7; }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        input[type=range] { width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <label>Khối lượng vật (m): <span id="massVal" class="highlight">20</span> kg</label>
+    <input type="range" id="massSlider" min="1" max="200" value="20">
+    <div class="info">
+        • <b>Hệ 2 ròng rọc:</b> Giúp giảm lực kéo 1/2 lần.<br>
+        • Vật nặng <span class="highlight">200kg</span> bây giờ chỉ cho cảm giác như <span class="highlight">100kg</span>.<br>
+        • Kéo nút đỏ bên phải để thử nghiệm.
+    </div>
+</div>
+
+<canvas id="pulleyCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('pulleyCanvas');
+    const ctx = canvas.getContext('2d');
+    const massSlider = document.getElementById('massSlider');
+    const massValDisplay = document.getElementById('massVal');
+
+    canvas.width = 600;
+    canvas.height = 600;
+
+    // Cấu hình tọa độ
+    const centerX = canvas.width / 2;
+    const fixedPulleyY = 120; // Ròng rọc cố định
+    const radius = 35;
+    
+    // Trạng thái vật lý
+    let mass = 20;
+    let movablePulleyY = 350; // Ròng rọc động (có thể di chuyển)
+    let handleY = 350;        // Tay cầm kéo
+    let velocity = 0;
+    let isDragging = false;
+
+    // Hằng số Pa-lăng: Khi ròng rọc động lên 1 đơn vị, tay kéo phải xuống 2 đơn vị
+    // Công thức: 2 * movablePulleyY + handleY = Constant
+    const systemConstant = 2 * 350 + 350; 
+
+    massSlider.oninput = function() {
+        mass = parseInt(this.value);
+        massValDisplay.innerText = mass;
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        if (Math.sqrt((mx - (centerX + radius))**2 + (my - handleY)**2) < 25) {
+            isDragging = true;
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const rect = canvas.getBoundingClientRect();
+            handleY = e.clientY - rect.top;
+            
+            // Giới hạn
+            if (handleY < 150) handleY = 150;
+            if (handleY > 550) handleY = 550;
+
+            // Tính toán vị trí ròng rọc động dựa trên tay kéo
+            // h_động = (Constant - h_tay_kéo) / 2
+            movablePulleyY = (systemConstant - handleY) / 2;
+            velocity = 0;
+        }
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    function drawPulley(x, y, r) {
+        // Vành ngoài
+        ctx.fillStyle = '#7f8c8d';
+        ctx.strokeStyle = '#34495e';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Rãnh trong
+        ctx.fillStyle = '#95a5a6';
+        ctx.beginPath();
+        ctx.arc(x, y, r - 8, 0, Math.PI * 2);
+        ctx.fill();
+        // Trục giữa
+        ctx.fillStyle = '#2c3e50';
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function update() {
+        if (!isDragging) {
+            // Lực kéo xuống do trọng lực (đã chia 2 vì có lợi về lực)
+            const gravityEffect = (mass * 0.01) / 2; 
+            velocity += gravityEffect;
+            
+            movablePulleyY += velocity;
+
+            // Chạm trần hoặc chạm đất
+            if (movablePulleyY < fixedPulleyY + radius + 20) {
+                movablePulleyY = fixedPulleyY + radius + 20;
+                velocity = 0;
+            }
+            if (movablePulleyY > 450) {
+                movablePulleyY = 450;
+                velocity = 0;
+            }
+
+            // Cập nhật vị trí tay cầm dựa trên ròng rọc động
+            handleY = systemConstant - (2 * movablePulleyY);
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Vẽ giá đỡ cố định
+        ctx.strokeStyle = '#34495e';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(centerX - radius, 0); 
+        ctx.lineTo(centerX - radius, 50); // Điểm móc dây cố định
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, fixedPulleyY); // Trục ròng rọc cố định
+        ctx.stroke();
+
+        // 2. Vẽ Sợi Dây (Vẽ trước ròng rọc để tạo hiệu ứng nằm dưới)
+        ctx.strokeStyle = '#d35400';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        // Điểm đầu: Móc cố định trên trần bên trái
+        ctx.moveTo(centerX - radius, 50);
+        // Xuống ròng rọc động (nhánh trái)
+        ctx.lineTo(centerX - radius, movablePulleyY);
+        // Vòng qua đáy ròng rọc động
+        ctx.arc(centerX, movablePulleyY, radius, Math.PI, 0, true);
+        // Đi lên ròng rọc cố định (nhánh giữa)
+        ctx.lineTo(centerX + radius, fixedPulleyY);
+        // Vòng qua đỉnh ròng rọc cố định
+        ctx.arc(centerX, fixedPulleyY, radius, 0, Math.PI, true);
+        // Đi xuống tay kéo (nhánh phải)
+        ctx.moveTo(centerX + radius, fixedPulleyY);
+        ctx.lineTo(centerX + radius, handleY);
+        ctx.stroke();
+
+        // 3. Vẽ các ròng rọc (Đè lên trên dây)
+        drawPulley(centerX, fixedPulleyY, radius); // Ròng rọc cố định
+        drawPulley(centerX, movablePulleyY, radius); // Ròng rọc động
+
+        // 4. Vẽ vật treo m (Gắn vào ròng rọc động)
+        const boxSize = 30 + (mass / 5);
+        ctx.fillStyle = '#2980b9';
+        // Vẽ móc nối từ ròng rọc động xuống vật
+        ctx.strokeStyle = '#34495e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(centerX, movablePulleyY + radius);
+        ctx.lineTo(centerX, movablePulleyY + radius + 20);
+        ctx.stroke();
+        // Hình hộp vật nặng
+        ctx.fillRect(centerX - boxSize/2, movablePulleyY + radius + 20, boxSize, boxSize);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(mass + 'kg', centerX, movablePulleyY + radius + 20 + boxSize/2 + 5);
+
+        // 5. Vẽ nút kéo
+        ctx.fillStyle = isDragging ? '#e74c3c' : '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(centerX + radius, handleY, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText("KÉO", centerX + radius, handleY + 4);
+
+        requestAnimationFrame(update);
+    }
+
+    update();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Mô phỏng Mạch điện Thông minh</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); color: var(--text); overflow: hidden; }
+        
+        /* Workspace */
+        .workspace { flex: 1; position: relative; background: #ffffff; }
+        canvas { display: block; cursor: crosshair; }
+
+        /* Toolbar phía trên */
+        .toolbar { position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 100; border: 1px solid #e2e8f0; }
+        .mode-btn { padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 600; background: white; transition: 0.2s; }
+        .mode-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Sidebar bên phải */
+        .sidebar { width: 300px; background: white; border-left: 1px solid #e2e8f0; padding: 25px; display: flex; flex-direction: column; box-shadow: -5px 0 20px rgba(0,0,0,0.02); }
+        h3 { margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        
+        .comp-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; position: relative; }
+        .comp-card:hover { border-color: var(--primary); background: #f0f7ff; }
+        .comp-card input { width: 80px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; float: right; font-size: 13px; }
+
+        .analysis-res { background: #0f172a; color: #38bdf8; padding: 20px; border-radius: 12px; margin-top: auto; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; }
+        .calc-btn { width: 100%; margin-top: 15px; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+    </style>
+</head>
+<body>
+
+<div class="workspace">
+    <div class="toolbar">
+        <button id="moveBtn" class="mode-btn active" onclick="setMode('move')">🖐 Di chuyển</button>
+        <button id="wireBtn" class="mode-btn" onclick="setMode('wire')">🔌 Nối dây</button>
+        <button class="mode-btn" onclick="clearAll()" style="color: #ef4444;">🗑 Xóa</button>
+    </div>
+    <canvas id="mc"></canvas>
+</div>
+
+<div class="sidebar">
+    <h3>Linh kiện</h3>
+    <div class="comp-card" onclick="addComp('battery')">
+        <strong>🔋 Nguồn (V)</strong>
+        <input type="number" id="v_val" value="12" onclick="event.stopPropagation()">
+    </div>
+    <div class="comp-card" onclick="addComp('resistor')">
+        <strong>〰️ Điện trở (Ω)</strong>
+        <input type="number" id="r_val" value="10" onclick="event.stopPropagation()">
+    </div>
+
+    <div class="analysis-res">
+        <div style="color: #94a3b8; margin-bottom: 10px;">> TRẠNG THÁI HỆ THỐNG</div>
+        <div id="output">Chờ lắp mạch...</div>
+    </div>
+    <button class="calc-btn" onclick="solve()">TÍNH TOÁN R TƯƠNG ĐƯƠNG</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('mc');
+    const ctx = canvas.getContext('2d');
+    let components = [];
+    let wires = [];
+    let mode = 'move';
+    let dragObj = null;
+    let activeWire = null;
+    let hoverTmnl = null;
+
+    function init() {
+        canvas.width = window.innerWidth - 300;
+        canvas.height = window.innerHeight;
+        render();
+    }
+    window.onresize = init;
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('moveBtn').className = m === 'move' ? 'mode-btn active' : 'mode-btn';
+        document.getElementById('wireBtn').className = m === 'wire' ? 'mode-btn active' : 'mode-btn';
+    }
+
+    function addComp(type) {
+        const val = parseFloat(document.getElementById(type === 'battery' ? 'v_val' : 'r_val').value) || 0;
+        components.push({
+            id: 'id_' + Date.now(),
+            type,
+            val,
+            x: canvas.width/2 + (Math.random()*40-20),
+            y: canvas.height/2 + (Math.random()*40-20),
+            terminals: [{id: 0, dx: -40, dy: 0}, {id: 1, dx: 40, dy: 0}]
+        });
+        render();
+    }
+
+    const getTmnlPos = (c, t) => ({ x: c.x + t.dx, y: c.y + t.dy });
+
+    function findTerminal(x, y) {
+        for(let c of components) {
+            for(let t of c.terminals) {
+                const p = getTmnlPos(c, t);
+                if(Math.hypot(p.x - x, p.y - y) < 15) return { comp: c, tmnl: t, pos: p };
+            }
+        }
+        return null;
+    }
+
+    canvas.onmousedown = (e) => {
+        const mx = e.offsetX, my = e.offsetY;
+        const target = findTerminal(mx, my);
+        if(mode === 'wire' && target) activeWire = { start: target, cur: {x: mx, y: my} };
+        else if(mode === 'move') dragObj = components.find(c => Math.hypot(c.x-mx, c.y-my) < 40);
+    };
+
+    canvas.onmousemove = (e) => {
+        const mx = e.offsetX, my = e.offsetY;
+        hoverTmnl = findTerminal(mx, my);
+        if(activeWire) activeWire.cur = hoverTmnl ? hoverTmnl.pos : {x: mx, y: my};
+        if(dragObj) { dragObj.x = mx; dragObj.y = my; }
+        render();
+    };
+
+    canvas.onmouseup = () => {
+        if(activeWire && hoverTmnl && activeWire.start.comp.id !== hoverTmnl.comp.id) {
+            wires.push({ from: activeWire.start, to: hoverTmnl });
+        }
+        activeWire = null; dragObj = null; render();
+    };
+
+    function drawResistor(c) {
+        ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-25, 0);
+        for(let i=0; i<3; i++) { ctx.lineTo(-15+i*10, -10); ctx.lineTo(-10+i*10, 10); }
+        ctx.lineTo(20, 0); ctx.lineTo(40, 0); ctx.stroke();
+        ctx.fillStyle = "#1e293b"; ctx.fillText(c.val + " Ω", -15, 25);
+    }
+
+    function drawBattery(c) {
+        ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-5, 0); ctx.moveTo(5, 0); ctx.lineTo(40, 0); ctx.stroke();
+        ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-5, 15); ctx.stroke();
+        ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(5, -8); ctx.lineTo(5, 8); ctx.stroke();
+        ctx.lineWidth = 2; ctx.fillText(c.val + " V", -10, 25);
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw grid
+        ctx.strokeStyle = "#f1f5f9"; ctx.lineWidth = 1;
+        for(let i=0; i<canvas.width; i+=25) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+        for(let i=0; i<canvas.height; i+=25) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+        // Draw wires
+        ctx.strokeStyle = "#475569"; ctx.lineWidth = 3;
+        wires.forEach(w => {
+            const p1 = getTmnlPos(w.from.comp, w.from.tmnl);
+            const p2 = getTmnlPos(w.to.comp, w.to.tmnl);
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        });
+
+        if(activeWire) {
+            ctx.setLineDash([5, 5]); ctx.beginPath();
+            ctx.moveTo(activeWire.start.pos.x, activeWire.start.pos.y);
+            ctx.lineTo(activeWire.cur.x, activeWire.cur.y); ctx.stroke(); ctx.setLineDash([]);
+        }
+
+        // Draw components
+        components.forEach(c => {
+            ctx.save(); ctx.translate(c.x, c.y); ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 2;
+            if(c.type === 'resistor') drawResistor(c);
+            else drawBattery(c);
+            c.terminals.forEach(t => {
+                const isH = hoverTmnl && hoverTmnl.comp.id === c.id && hoverTmnl.tmnl.id === t.id;
+                ctx.fillStyle = isH ? "#22c55e" : "#ef4444";
+                ctx.beginPath(); ctx.arc(t.dx, t.dy, isH ? 7 : 4, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.restore();
+        });
+    }
+
+    // THUẬT TOÁN TÍNH R TƯƠNG ĐƯƠNG NÂNG CAO
+    function solve() {
+        if (components.length < 2) return;
+
+        // 1. Nhóm các điểm tiếp xúc thành các "Nút" (Nets)
+        let tmnlToNet = new Map();
+        let nextNetId = 0;
+
+        components.forEach(c => c.terminals.forEach(t => {
+            tmnlToNet.set(c.id + '-' + t.id, nextNetId++);
+        }));
+
+        wires.forEach(w => {
+            let net1 = tmnlToNet.get(w.from.comp.id + '-' + w.from.tmnl.id);
+            let net2 = tmnlToNet.get(w.to.comp.id + '-' + w.to.tmnl.id);
+            if (net1 !== net2) {
+                // Hợp nhất 2 Net
+                tmnlToNet.forEach((val, key) => { if(val === net2) tmnlToNet.set(key, net1); });
+            }
+        });
+
+        const resistors = components.filter(c => c.type === 'resistor');
+        const battery = components.find(c => c.type === 'battery');
+
+        if(!battery || resistors.length === 0) {
+            document.getElementById('output').innerHTML = "Thiếu nguồn hoặc điện trở!";
+            return;
+        }
+
+        // Nhận diện song song: Những R nối chung 2 Net ID
+        let netPairs = resistors.map(r => {
+            let n1 = tmnlToNet.get(r.id + '-0');
+            let n2 = tmnlToNet.get(r.id + '-1');
+            return { r, pair: [n1, n2].sort().join('_') };
+        });
+
+        // Group by pairs
+        let groups = {};
+        netPairs.forEach(np => {
+            if(!groups[np.pair]) groups[np.pair] = [];
+            groups[np.pair].push(np.r);
+        });
+
+        let r_equivalent = 0;
+        let details = "";
+
+        // Tính toán các cụm song song trước
+        let processedGroups = Object.values(groups).map(g => {
+            if(g.length > 1) {
+                let invSum = g.reduce((s, r) => s + (1/r.val), 0);
+                return 1/invSum;
+            }
+            return g[0].val;
+        });
+
+        // Mạch nối tiếp đơn giản (Cộng dồn các cụm)
+        r_equivalent = processedGroups.reduce((a, b) => a + b, 0);
+        let i_total = battery.val / r_equivalent;
+
+        document.getElementById('output').innerHTML = `
+            R_tđ: ${r_equivalent.toFixed(2)} Ω<br>
+            I mạch chính: ${i_total.toFixed(3)} A<br>
+            P tổng: ${(battery.val * i_total).toFixed(1)} W<br>
+            ---<br>
+            Phát hiện: ${Object.keys(groups).length} nhánh chính.
+        `;
+    }
+
+    function clearAll() { components = []; wires = []; render(); document.getElementById('output').innerHTML = "Đã xóa sạch."; }
+    init();
+</script>
+</body>
+</html>

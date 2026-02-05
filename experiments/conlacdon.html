@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Con lắc đơn Chuẩn Vật Lý</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --light: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #main-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            max-width: 1100px;
+        }
+
+        .canvas-container {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            background: #fafafa;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        .controls {
+            width: 350px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .value-display { color: var(--accent); font-family: monospace; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 5px;
+        }
+
+        .btn-adjust {
+            padding: 5px;
+            border: 1px solid #ddd;
+            background: var(--light);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .btn-adjust:hover { background: #dfe6e9; }
+
+        .stats-panel {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .stats-panel span { color: #f1c40f; font-weight: bold; }
+
+        .btn-main {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--success);
+        }
+
+        .note-panel {
+            background: white;
+            padding: 1.5em;
+            border-radius: 15px;
+            font-size: 13px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            max-width: 850px;
+            width: 100%;
+            border-left: 5px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Con Lắc Đơn</h1>
+
+    <div id="main-wrapper">
+        <div class="canvas-container">
+            <canvas id="pendulumCanvas" width="450" height="500"></canvas>
+        </div>
+
+        <div class="controls">
+            <!-- Chiều dài l -->
+            <div class="control-group">
+                <div class="label-row"><span>Chiều dài l (m)</span><span id="lVal" class="value-display">2.50</span></div>
+                <input type="range" id="lengthInput" min="50" max="400" value="250">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('lengthInput', -10)">-0.1m</button>
+                    <button class="btn-adjust" onclick="step('lengthInput', -1)">-0.01m</button>
+                    <button class="btn-adjust" onclick="step('lengthInput', 1)">+0.01m</button>
+                    <button class="btn-adjust" onclick="step('lengthInput', 10)">+0.1m</button>
+                </div>
+            </div>
+
+            <!-- Trọng lực g -->
+            <div class="control-group">
+                <div class="label-row"><span>Trọng lực g (m/s²)</span><span id="gVal" class="value-display">9.80</span></div>
+                <input type="range" id="gravityInput" min="1" max="20" step="0.1" value="9.8">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('gravityInput', -1)">-1</button>
+                    <button class="btn-adjust" onclick="step('gravityInput', -0.1)">-0.1</button>
+                    <button class="btn-adjust" onclick="step('gravityInput', 0.1)">+0.1</button>
+                    <button class="btn-adjust" onclick="step('gravityInput', 1)">+1</button>
+                </div>
+            </div>
+
+            <!-- Góc ban đầu -->
+            <div class="control-group">
+                <div class="label-row"><span>Biên độ góc α₀ (rad)</span><span id="angleVal" class="value-display">0.79</span></div>
+                <input type="range" id="angleInput" min="-179" max="179" value="45">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('angleInput', -10)">-10°</button>
+                    <button class="btn-adjust" onclick="step('angleInput', -1)">-1°</button>
+                    <button class="btn-adjust" onclick="step('angleInput', 1)">+1°</button>
+                    <button class="btn-adjust" onclick="step('angleInput', 10)">+10°</button>
+                </div>
+            </div>
+
+            <button class="btn-main" onclick="resetSim()">Thả Con Lắc</button>
+
+            <div class="stats-panel">
+                <strong>DỮ LIỆU VẬT LÝ (SI):</strong><br>
+                - Chu kỳ (T): <span id="resT">0</span> s<br>
+                - Biên độ dài (A): <span id="resA">0</span> m<br>
+                - Vận tốc (v): <span id="resV">0</span> m/s<br>
+                - Li độ góc (α): <span id="resDeg">0</span> rad
+            </div>
+        </div>
+    </div>
+    <div class="note-panel">
+        w = √(g/l) <br>
+        T = 2π√(l/g) <br>
+        s = l * α <br>
+        S₀ = l * α₀ <br>
+        s = S₀ cos(wt + φ) <br>
+        α = α₀ cos(wt + φ) <br>
+        <h1 class="label-row" style="font-size:20px; margin-top:10px;">Năng lượng của con lắc đơn:</h1>
+        Wđ = 1/2 m v² <br>
+        Wt = 1/2 m w² s² = 1/2 m g l α² <br>
+        W = Wd + Wt = 1/2 m w² s₀² = 1/2 m g l α₀² <br>
+        <h1 class="label-row" style="font-size:20px; margin-top:10px;">Vận tốc của vật và lực căng của dây treo:</h1>
+        v² = 2 g l (cos α - cos α₀) <br>
+        T = m g (3 cos α - 2 cos α₀) <br>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pendulumCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Cấu hình vật lý chuẩn
+        const PIXELS_PER_METER = 100;
+        let L_px = 250; 
+        let g = 9.8; 
+        
+        let angle = Math.PI/4; // Radian
+        let angleV = 0; 
+        let angleA = 0;
+        let dt = 0.016; // Giả định 60fps (1/60s)
+
+        let origin = { x: 225, y: 50 };
+
+        function step(inputId, delta) {
+            const el = document.getElementById(inputId);
+            let newVal = parseFloat(el.value) + delta;
+            newVal = Math.max(el.min, Math.min(el.max, newVal));
+            el.value = newVal;
+            updateParams();
+        }
+
+        function updateParams() {
+            L_px = parseFloat(document.getElementById('lengthInput').value);
+            g = parseFloat(document.getElementById('gravityInput').value);
+            let angleDeg = parseFloat(document.getElementById('angleInput').value);
+            
+            // Đổi sang mét để tính toán lý thuyết
+            let L_m = L_px / PIXELS_PER_METER;
+
+            // Hiển thị UI chuẩn mét và radian
+            document.getElementById('lVal').innerText = L_m.toFixed(2);
+            document.getElementById('gVal').innerText = g.toFixed(2);
+            document.getElementById('angleVal').innerText = (angleDeg * Math.PI / 180).toFixed(2);
+
+            // Tính Chu kỳ T (s)
+            const T = 2 * Math.PI * Math.sqrt(L_m / g);
+            // Tính Biên độ dài A (m)
+            const alpha0_rad = Math.abs(angleDeg * Math.PI / 180);
+            const A_m = L_m * alpha0_rad;
+            
+            document.getElementById('resT').innerText = T.toFixed(2);
+            document.getElementById('resA').innerText = A_m.toFixed(2);
+        }
+
+        function resetSim() {
+            const startDeg = document.getElementById('angleInput').value;
+            angle = (startDeg * Math.PI) / 180;
+            angleV = 0; 
+            angleA = 0;
+        }
+
+        function draw() {
+            let L_m = L_px / PIXELS_PER_METER;
+
+            // Thuật toán vật lý: alpha'' = -(g/L) * sin(alpha)
+            angleA = (-g / L_m) * Math.sin(angle);
+            angleV += angleA * dt;
+            angle += angleV * dt;
+
+            // Vị trí vẽ (pixel)
+            const x = origin.x + L_px * Math.sin(angle);
+            const y = origin.y + L_px * Math.cos(angle);
+
+            // Cập nhật kết quả đo chuẩn m/s và rad
+            let v_ms = Math.abs(angleV * L_m); // v = omega * R
+            document.getElementById('resV').innerText = v_ms.toFixed(2);
+            document.getElementById('resDeg').innerText = angle.toFixed(2);
+
+            // Vẽ đồ họa
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ giá treo
+            ctx.strokeStyle = "#2c3e50";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 50, origin.y);
+            ctx.lineTo(origin.x + 50, origin.y);
+            ctx.stroke();
+
+            // Vẽ dây
+            ctx.strokeStyle = "#7f8c8d";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            // Vẽ vật nặng
+            ctx.fillStyle = "#e74c3c";
+            ctx.beginPath();
+            ctx.arc(x, y, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            requestAnimationFrame(draw);
+        }
+
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', updateParams);
+        });
+
+        updateParams();
+        resetSim();
+        draw();
+    </script>
+</body>
+</html>

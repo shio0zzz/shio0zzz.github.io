@@ -1,0 +1,332 @@
+<html lang="vi">
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Con Lắc Lò Xo</title>
+        <link rel="stylesheet" href="styles.css">
+        <script src="script.js" defer></script>
+        <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --light: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #main-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            max-width: 1100px;
+        }
+
+        .canvas-container {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            background: #fafafa;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        .controls {
+            width: 350px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .value-display { color: var(--accent); font-family: monospace; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 5px;
+        }
+
+        .btn-adjust {
+            padding: 5px;
+            border: 1px solid #ddd;
+            background: var(--light);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .btn-adjust:hover { background: #dfe6e9; }
+
+        .stats-panel {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .stats-panel span { color: #f1c40f; font-weight: bold; }
+
+        .btn-main {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--success);
+        }
+
+        .status-tag {
+            background: #fdfde8;
+            color: #2980b9;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .note-panel {
+            background:  rgb(255, 255, 255);
+            padding: 1em;
+            border-radius: 30px;
+            font-size: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            max-width: 850px;
+            width: 100%;
+        }
+    </style>
+    </head>
+
+<body>
+    <h1>Con Lắc Lò Xo</h1>
+
+    <div id="main-wrapper">
+        <div class="canvas-container">
+            <canvas id="pendulumCanvas" width="500" height="400"></canvas>
+        </div>
+
+        <div class="controls">
+            <!-- do cung k-->
+            <div class="control-group">
+                <div class="label-row"><span>Độ cứng k (N/m)</span><span id="kVal" class="value-display">30</span></div>
+                <input type="range" id="kInput" min="1" max="100" step="1" value="30">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('kInput', -10)">-10</button>
+                    <button class="btn-adjust" onclick="step('kInput', -1)">-1</button>
+                    <button class="btn-adjust" onclick="step('kInput', 1)">+1</button>
+                    <button class="btn-adjust" onclick="step('kInput', 10)">+10</button>
+                </div>
+            </div>
+            <!-- khoi luong m-->
+             <div class="control-group">
+                <div class="label-row"><span>Khối lượng m (kg)</span><span id="mVal" class="value-display">4.00</span></div>
+                <input type="range" id="mInput" min="0.1" max="10.0" step="0.1" value="1.0">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('mInput', -1.0)">-1.0</button>
+                    <button class="btn-adjust" onclick="step('mInput', -0.1)">-0.1</button>
+                    <button class="btn-adjust" onclick="step('mInput', 0.1)">+0.1</button>
+                    <button class="btn-adjust" onclick="step('mInput', 1.0)">+1.0</button>
+                </div>
+             </div>
+             <!-- trong luc g-->
+              <div class="control-group">
+                <div class="label-row"><span>Trọng lực g (m/s²)</span><span id="gVal" class="value-display">0.98</span></div>
+                <input type="range" id="gInput" min="0.1" max="3.0" step="0.01" value="0.98">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('gInput', -0.05)">-0.05</button>
+                    <button class="btn-adjust" onclick="step('gInput', -0.01)">-0.01</button>
+                    <button class="btn-adjust" onclick="step('gInput', 0.01)">+0.01</button>
+                    <button class="btn-adjust" onclick="step('gInput', 0.05)">+0.05</button>
+                </div>
+              </div>
+            <!-- chieu dai can bang -->
+             <div class="control-group">
+                <div class="label-row"><span>Chiều dài l (m)</span><span id="lVal" class="value-display">20</span></div>
+                <input type="range" id="lInput" min="0.1" max="5.0" step="0.1" value="1.0">
+                <div class="button-group">
+                    <button class="btn-adjust" onclick="step('lInput', -10)">-10</button>
+                    <button class="btn-adjust" onclick="step('lInput', -1)">-1</button>
+                    <button class="btn-adjust" onclick="step('lInput', 1)">+1</button>
+                    <button class="btn-adjust" onclick="step('lInput', 10)">+10</button>
+                </div>
+             </div>
+
+            <button class="btn-main" onclick="resetSim()">Thả Con Lắc Lò Xo</button>
+
+            <div class="stats-panel">
+                <strong> Dữ Liệu Vật Lý</strong>
+                <div>Chu kỳ T: <span id="resT">0</span> s</div>
+                <div>Tần số f: <span id="resf">0</span> Hz</div>
+                <div>Tần số góc ω: <span id="resw">0</span> rad/s</div>
+                <div>Dịch chuyển cân bằng Δl: <span id="resDl">0</span> m</div>
+                <div>Lực đàn hồi Fđh: <span id="resFdh">0</span> N</div>
+                <div>Vận tốc: <span id = "resv">0</span></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    const canvas = document.getElementById('pendulumCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let k = 30, l = 20, m = 4.0, g = 0.98;
+    let origin = { x: 225, y: 50 };
+
+    function step(inputId, delta) {
+        const input = document.getElementById(inputId);
+        let newValue = parseFloat(input.value) + delta;
+        if (newValue < parseFloat(input.min)) newValue = parseFloat(input.min);
+        if (newValue > parseFloat(input.max)) newValue = parseFloat(input.max);
+        input.value = newValue.toFixed(2);
+        updateValues();
+    }
+
+    function updateValues() {
+        k = parseFloat(document.getElementById('kInput').value);
+        m = parseFloat(document.getElementById('mInput').value);
+        g = parseFloat(document.getElementById('gInput').value);
+        l = parseFloat(document.getElementById('lInput').value);
+        const T = 2 * Math.PI * Math.sqrt(m / k);
+        const w = Math.sqrt(k / m);
+        const delta_l = Math.sqrt((m * g) / k);
+        const Fdh = k * delta_l;
+        const v = Math.sqrt(2 * g * ( (posY - origin.y)/40 - delta_l ));
+
+        document.getElementById('resT').innerText = T.toFixed(2);
+        document.getElementById('resf').innerText = (1 / T).toFixed(2);
+        document.getElementById('resw').innerText = w.toFixed(2);
+        document.getElementById('resDl').innerText = delta_l.toFixed(2);
+        document.getElementById('resFdh').innerText = Fdh.toFixed(2);
+        document.getElementById('resv').innerText = v.toFixed(2);
+    }
+
+    let posY = 150;      
+    let v = 0;           
+    let dt = 0.15;       
+    let scale = 40;      
+
+    function updateValues() {
+        k = parseFloat(document.getElementById('kInput').value);
+        m = parseFloat(document.getElementById('mInput').value);
+        g = parseFloat(document.getElementById('gInput').value);
+        l = parseFloat(document.getElementById('lInput').value);
+
+        const T = 2 * Math.PI * Math.sqrt(m / k);
+        const w = Math.sqrt(k / m);
+        const delta_l = (m * g) / k; // Sửa lại: Delta l = mg/k
+        const Fdh = k * delta_l;
+
+        document.getElementById('resT').innerText = T.toFixed(2);
+        document.getElementById('resf').innerText = (1 / T).toFixed(2);
+        document.getElementById('resw').innerText = w.toFixed(2);
+        document.getElementById('resDl').innerText = delta_l.toFixed(2);
+        document.getElementById('resFdh').innerText = Fdh.toFixed(2);
+
+        // Cập nhật hiển thị cho các slider
+        document.getElementById('kVal').innerText = k;
+        document.getElementById('mVal').innerText = m.toFixed(2);
+        document.getElementById('gVal').innerText = g.toFixed(2);
+        document.getElementById('lVal').innerText = l.toFixed(1);
+    }
+
+    function resetSim() {
+        updateValues();
+        posY = origin.y + (l * scale); 
+        v = 0;
+    }
+
+    function drawSpring(x, yStart, yEnd, coils) {
+        const width = 20;
+        const step = (yEnd - yStart) / coils;
+        ctx.strokeStyle = "#7f8c8d";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, yStart);
+        for (let i = 0; i < coils; i++) {
+            const currentY = yStart + (i * step) + (step / 2);
+            const currentX = x + (i % 2 === 0 ? width : -width);
+            ctx.lineTo(currentX, currentY);
+        }
+        ctx.lineTo(x, yEnd);
+        ctx.stroke();
+    }
+
+    function draw() {
+        let currentL = (posY - origin.y) / scale; 
+        let x = currentL - l; // Độ dãn lò xo
+        
+        let F_net = (m * g) - (k * x); // Tổng lực tác dụng
+        let acceleration = F_net / m;   // Gia tốc a = F/m
+        
+        v += acceleration * dt;         // Cập nhật vận tốc
+        posY += v * dt;                 // Cập nhật vị trí
+
+        // 2. Vẽ đồ họa
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Vẽ trần treo
+        ctx.fillStyle = "#2c3e50";
+        ctx.fillRect(origin.x - 60, origin.y - 10, 120, 10);
+
+        // Vẽ lò xo zigzag
+        drawSpring(origin.x, origin.y, posY, 15);
+
+        // Vẽ vật nặng (Hình hộp)
+        const boxWidth = 40;
+        const boxHeight = 30;
+        ctx.fillStyle = "#e67e22";
+        ctx.fillRect(origin.x - boxWidth/2, posY, boxWidth, boxHeight);
+        ctx.strokeStyle = "#d35400";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(origin.x - boxWidth/2, posY, boxWidth, boxHeight);
+
+        // Hiển thị li độ tức thời trên Canvas (tùy chọn)
+        ctx.fillStyle = "#333";
+        ctx.font = "12px Arial";
+        ctx.fillText(`Li độ x: ${x.toFixed(2)} m`, origin.x + 40, posY + 15);
+
+        requestAnimationFrame(draw);
+    }
+    updateValues();
+    resetSim();
+    draw();
+</script>
+</html>

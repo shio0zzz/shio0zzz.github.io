@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng giao thoa ánh sáng </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --panel: #ffffff;
+            --accent: #3b82f6;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #f0f6fc;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-y: auto; 
+        }
+
+        /* Typography */
+        .title-hero { font-weight: 900; letter-spacing: -0.04em; }
+        .num-data { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+        .label-bold { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #8b949e; }
+
+        /* Công thức phân số chuẩn */
+        .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; padding: 0 4px; }
+        .numerator { border-bottom: 1px solid #94a3b8; padding: 0 4px; line-height: 1.2; }
+        .denominator { padding: 0 4px; line-height: 1.2; }
+
+        /* Layout Grid */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        .glass-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Header */
+        .main-header {
+            padding: 1rem 2.5rem;
+            border-bottom: 1px solid var(--border);
+            background: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-controls { display: flex; align-items: center; gap: 2.5rem; }
+
+        .mode-toggle {
+            position: relative; background: #010409; border-radius: 10px; padding: 3px;
+            display: flex; width: 240px; height: 42px; cursor: pointer; border: 1px solid #30363d;
+        }
+        .mode-slider {
+            position: absolute; top: 3px; left: 3px; width: calc(50% - 3px); height: calc(100% - 6px);
+background: #fff; border-radius: 8px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mode-text { flex: 1; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 11px; font-weight: 800; color: #8b949e; transition: 0.2s; }
+        .mode-text.active { color: #0d1117; }
+
+        /* HUD "i" */
+        .i-result-hud { display: flex; align-items: baseline; gap: 4px; }
+        .i-label { font-size: 14px; font-weight: 600; color: #64748b; margin-right: 4px; }
+        .i-value { font-size: 28px; font-weight: 700; color: #000000; font-family: 'Space Grotesk', sans-serif; line-height: 1; }
+        .i-unit { font-size: 14px; font-weight: 700; color: var(--accent); text-transform: lowercase; }
+
+        /* Inputs */
+        input[type=range] { -webkit-appearance: none; background: #30363d; height: 4px; border-radius: 2px; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #fff; border-radius: 50%; border: 2px solid var(--accent); }
+
+        .btn-step { width: 36px; height: 36px; background: #21262d; border: 1px solid #30363d; border-radius: 8px; font-size: 18px; transition: 0.2s; }
+        .btn-step:hover { background: var(--accent); color: white; }
+
+        .input-k { 
+            background: #ffffff; border: 1px solid #30363d; 
+            color: var(--accent); width: 60px; text-align: center; 
+            border-radius: 6px; font-weight: 800; font-size: 13px; padding: 2px 0; 
+        }
+        
+        .select-ui { 
+            background: #010409; border: 1px solid #30363d; 
+            color: var(--accent); border-radius: 6px; padding: 4px 8px; 
+            font-size: 12px; font-weight: 700; cursor: pointer; 
+        }
+        .select-ui option { background: #0d1117; color: #fff; }
+
+        canvas { background: #000; border-radius: 12px; }
+        .fallback-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; color: #ef4444; font-size: 12px; font-weight: bold; text-align: center; padding: 20px; z-index: 20; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div>
+        </div>
+        
+        <div class="header-controls">
+            <!-- Thanh tốc độ sóng - Đã tăng khoảng cách chữ -->
+            <div class="flex items-center gap-4 bg-white/5 p-3 px-5 rounded-xl border border-white/5">
+                <span class="label-bold" style="font-size: 10px; margin-top: 14px;">0</span>
+                <div class="flex flex-col items-center">
+                    <!-- mb-3 để không bị vướng nút bấm -->
+<span class="label-bold mb-3" style="font-size: 9px; color: var(--accent); letter-spacing: 0.15em;">Tốc độ sóng</span>
+                    <input type="range" id="speedSlider" min="0" max="0.5" step="0.01" value="0.15" class="w-32">
+                </div>
+                <span class="label-bold" style="font-size: 10px; margin-top: 14px;">MAX</span>
+            </div>
+
+            <!-- Chế độ -->
+            <div class="mode-toggle" onclick="toggleMode()">
+                <div class="mode-slider" id="pillActive"></div>
+                <div class="mode-text active" id="txtMono">ĐƠN SẮC</div>
+                <div class="mode-text" id="txtWhite">ÁNH SÁNG TRẮNG</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Cột Trái -->
+        <div class="flex flex-col gap-4">
+            <!-- 2D Canvas -->
+            <div class="glass-card min-h-[450px] relative">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="label-bold text-white uppercase">Mô phỏng trường sóng 2D (Top-down view)</span>
+                    <span class="num-data text-[10px] text-emerald-500 font-bold">● SYSTEM LIVE</span>
+                </div>
+                <div class="flex-1 bg-black rounded-lg relative overflow-hidden">
+                    <div id="waveError" class="fallback-msg hidden">Đang khởi tạo hệ thống đồ họa...</div>
+                    <canvas id="waveCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Màn quan sát -->
+            <div class="glass-card h-44">
+                <div class="flex gap-8 items-center h-full">
+                    <div class="flex-1 flex flex-col h-full overflow-hidden">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="label-bold text-white">Hình ảnh trên màn quan sát (Projection)</span>
+                            <div class="i-result-hud">
+                                <span class="i-label">i =</span>
+                                <span class="i-value" id="res-i">0.000</span>
+                                <span class="i-unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative bg-black rounded-lg">
+                            <canvas id="screenCanvas"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Chú thích & Công thức -->
+                    <div class="w-64 border-l border-white/10 pl-6 flex flex-col justify-center">
+                        <b class="text-[11px] text-white uppercase mb-2 block tracking-widest">Phân tích vật lý</b>
+                        <div class="text-[11px] space-y-2 text-slate-400">
+                            <div class="flex items-center gap-2">
+                                <span>Cường độ:</span>
+<span class="text">I = I₀ · cos²</span>
+                                <div class="fraction text-[10px] text-white">
+                                    <div class="numerator">π · a · x</div>
+                                    <div class="denominator">λ · D</div>
+                                </div>
+                            </div>
+                            <p><b>i:</b> Khoảng cách giữa 2 vân sáng.</p>
+                            <p><b>I = 0:</b> Vị trí vân tối (Triệt tiêu).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột Phải -->
+        <aside class="glass-card gap-6">
+            <h2 class="label-bold text-white border-b border-white/10 pb-3 mb-1 uppercase">Console điều khiển</h2>
+
+            <!-- Module a -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-end">
+                    <span class="label-bold">Khoảng cách khe (a)</span>
+                    <div class="text-right">
+                        <span class="text-3xl num-data font-bold text-white leading-none" id="disp-a">0.500</span>
+                        <span class="label-bold ml-1" id="unit-a-label">mm</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="btn-step" onclick="stepAdjust('a', -1)">−</button>
+                    <input type="range" id="slider-a" class="flex-1">
+                    <button class="btn-step" onclick="stepAdjust('a', 1)">+</button>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="label-bold" style="font-size: 9px;">Nhảy k</span>
+                        <input type="number" id="step-a" value="1" class="input-k">
+                    </div>
+                    <select id="unit-a" class="select-ui" onchange="changeUnit('a')"></select>
+                </div>
+            </div>
+
+            <!-- Module D -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-end">
+                    <span class="label-bold">Khoảng cách màn (D)</span>
+                    <div class="text-right">
+                        <span class="text-3xl num-data font-bold text-white leading-none" id="disp-D">2.000</span>
+                        <span class="label-bold ml-1" id="unit-D-label">m</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="btn-step" onclick="stepAdjust('D', -1)">−</button>
+                    <input type="range" id="slider-D" class="flex-1">
+                    <button class="btn-step" onclick="stepAdjust('D', 1)">+</button>
+                </div>
+                <div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+                        <span class="label-bold" style="font-size: 9px;">Nhảy k</span>
+                        <input type="number" id="step-D" value="1" class="input-k">
+                    </div>
+                    <select id="unit-D" class="select-ui" onchange="changeUnit('D')"></select>
+                </div>
+            </div>
+
+            <!-- Module λ -->
+            <div id="row-L" class="space-y-3 transition-opacity">
+                <div class="flex justify-between items-end">
+                    <span class="label-bold text-red-500">Bước sóng (λ)</span>
+                    <div class="text-right">
+                        <span class="text-3xl num-data font-bold text-white leading-none" id="disp-L">550</span>
+                        <span class="label-bold ml-1" id="unit-L-label">nm</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="btn-step" onclick="stepAdjust('L', -1)">−</button>
+                    <input type="range" id="slider-L" class="flex-1">
+                    <button class="btn-step" onclick="stepAdjust('L', 1)">+</button>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="label-bold" style="font-size: 9px;">Nhảy k</span>
+                        <input type="number" id="step-L" value="1" class="input-k">
+                    </div>
+                    <select id="unit-L" class="select-ui" onchange="changeUnit('L')"></select>
+                </div>
+            </div>
+
+            <!-- Gợi ý -->
+            <div class="mt-auto p-4 bg-white/5 rounded-xl border border-white/5 text-[10px] italic text-slate-500">
+                Gợi ý: Tăng 'D' và giảm 'a' để quan sát hệ vân giao thoa trải rộng hơn. Thử điều chỉnh Tốc độ về 0 để chụp lại hình ảnh tĩnh.
+            </div>
+        </aside>
+    </main>
+
+<script>
+'use strict';
+
+const waveCanvas = document.getElementById('waveCanvas');
+const wCtx = waveCanvas.getContext('2d', { alpha: false });
+const screenCanvas = document.getElementById('screenCanvas');
+const sCtx = screenCanvas.getContext('2d');
+const waveErrorMsg = document.getElementById('waveError');
+
+const units = {
+  m:  { mult: 1 },
+  dm: { mult: 0.1 },
+  cm: { mult: 0.01 },
+  mm: { mult: 0.001 },
+  um: { mult: 1e-6 },
+  nm: { mult: 1e-9 }
+};
+
+let state = {
+  a: 0.0005,
+  D: 2.0,
+  L: 550e-9,
+  mode: 'mono',
+  speed: 0.15,
+  time: 0,
+  unit_a: 'mm',
+  unit_D: 'm',
+  unit_L: 'nm'
+};
+
+const limits = {
+  a: [0.05e-3, 2e-3],
+  D: [0.5, 5.0],
+  L: [380e-9, 780e-9]
+};
+
+function init() {
+  ['a', 'D', 'L'].forEach(k => {
+    const sel = document.getElementById(`unit-${k}`);
+    Object.keys(units).forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u;
+      opt.textContent = u;
+      sel.appendChild(opt);
+    });
+    sel.value = state[`unit_${k}`];
+  });
+
+  document.getElementById('speedSlider').oninput = e => {
+    state.speed = parseFloat(e.target.value);
+  };
+
+  window.addEventListener('resize', resize);
+  resize();
+  updateUI();
+  animate();
+}
+
+function resize() {
+  waveCanvas.width = waveCanvas.parentElement.clientWidth || 800;
+  waveCanvas.height = waveCanvas.parentElement.clientHeight || 450;
+  screenCanvas.width = screenCanvas.parentElement.clientWidth || 800;
+  screenCanvas.height = screenCanvas.parentElement.clientHeight || 120;
+}
+
+function toggleMode() {
+  state.mode = (state.mode === 'mono') ? 'white' : 'mono';
+
+  document.getElementById('pillActive').style.transform =
+    state.mode === 'white' ? 'translateX(100%)' : 'translateX(0)';
+
+  document.getElementById('txtMono').classList.toggle('active', state.mode === 'mono');
+  document.getElementById('txtWhite').classList.toggle('active', state.mode === 'white');
+
+  document.getElementById('row-L').style.opacity =
+    state.mode === 'white' ? '0.1' : '1';
+
+  updateUI();
+}
+
+function changeUnit(key) {
+  state[`unit_${key}`] = document.getElementById(`unit-${key}`).value;
+  updateUI();
+}
+
+function stepAdjust(key, dir) {
+  const kValue = parseFloat(document.getElementById(`step-${key}`).value) || 0;
+  const mult = units[state[`unit_${key}`]].mult;
+
+  let newVal = state[key] + dir * kValue * mult;
+  newVal = Math.max(limits[key][0], Math.min(limits[key][1], newVal));
+
+  state[key] = newVal;
+  updateUI();
+}
+
+function updateUI() {
+  ['a', 'D', 'L'].forEach(k => {
+    const mult = units[state[`unit_${k}`]].mult;
+    const val = state[k] / mult;
+
+    document.getElementById(`disp-${k}`).textContent =
+      val.toLocaleString('en-US', {
+        maximumFractionDigits: (k === 'L' ? 0 : 3),
+        minimumFractionDigits: (k === 'L' ? 0 : 3)
+      });
+
+    document.getElementById(`unit-${k}-label`).textContent = state[`unit_${k}`];
+
+    const slider = document.getElementById(`slider-${k}`);
+    slider.min = limits[k][0] / mult;
+    slider.max = limits[k][1] / mult;
+    slider.step = (slider.max - slider.min) / 1000;
+    slider.value = val;
+
+    slider.oninput = e => {
+      state[k] = parseFloat(e.target.value) * mult;
+      updateUI();
+    };
+  });
+
+  document.getElementById('res-i').textContent =
+    ((state.L * state.D / state.a) * 1000).toFixed(3);
+}
+
+function wavelengthToRGB(l) {
+  let nm = l * 1e9;
+  let r = 0, g = 0, b = 0;
+
+  if (nm < 440) {
+    r = -(nm - 440) / (440 - 380); b = 1;
+  } else if (nm < 490) {
+    g = (nm - 440) / (490 - 440); b = 1;
+  } else if (nm < 510) {
+    g = 1; b = -(nm - 510) / (510 - 490);
+  } else if (nm < 580) {
+    r = (nm - 510) / (580 - 510); g = 1;
+  } else if (nm < 645) {
+    r = 1; g = -(nm - 645) / (645 - 580);
+  } else {
+    r = 1;
+  }
+  return [r * 255, g * 255, b * 255];
+}
+
+function animate() {
+  try {
+    state.time += state.speed;
+
+    const w = waveCanvas.width;
+    const h = waveCanvas.height;
+    if (!w || !h) return;
+
+    const img = wCtx.createImageData(w, h);
+    const data = img.data;
+
+    const slitX = 70;
+    const slitGap = state.a * 35000;
+    const s1y = h / 2 - slitGap;
+    const s2y = h / 2 + slitGap;
+
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        const i = (y * w + x) * 4;
+
+        const d1 = Math.hypot(x - slitX, y - s1y);
+        const d2 = Math.hypot(x - slitX, y - s2y);
+
+        let r = 0, g = 0, b = 0;
+
+        if (state.mode === 'mono') {
+          const wl = state.L * 3e7;
+          const amp = (Math.cos(d1 / wl - state.time) + Math.cos(d2 / wl - state.time)) / 2;
+          const I = amp * amp;
+          const c = wavelengthToRGB(state.L);
+          r = c[0] * I;
+          g = c[1] * I;
+          b = c[2] * I;
+        } else {
+          [420e-9, 480e-9, 530e-9, 580e-9, 650e-9].forEach(wl => {
+            const wlx = wl * 3e7;
+            const amp = (Math.cos(d1 / wlx - state.time) + Math.cos(d2 / wlx - state.time)) / 2;
+            const I = amp * amp;
+            const c = wavelengthToRGB(wl);
+            r += c[0] * I * 0.35;
+            g += c[1] * I * 0.35;
+            b += c[2] * I * 0.35;
+          });
+        }
+
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
+        data[i + 3] = 255;
+      }
+    }
+
+    wCtx.putImageData(img, 0, 0);
+
+    const sw = screenCanvas.width;
+    const sh = screenCanvas.height;
+    const sImg = sCtx.createImageData(sw, sh);
+
+    for (let x = 0; x < sw; x++) {
+      const xReal = (x - sw / 2) * 1.5e-5;
+      let r = 0, g = 0, b = 0;
+
+      if (state.mode === 'mono') {
+        const I = Math.cos((Math.PI * state.a * xReal) / (state.L * state.D)) ** 2;
+        const c = wavelengthToRGB(state.L);
+        r = c[0] * I;
+        g = c[1] * I;
+        b = c[2] * I;
+      } else {
+        for (let l = 380e-9; l <= 750e-9; l += 30e-9) {
+          const I = Math.cos((Math.PI * state.a * xReal) / (l * state.D)) ** 2;
+          const c = wavelengthToRGB(l);
+          r += c[0] * I * 0.2;
+          g += c[1] * I * 0.2;
+          b += c[2] * I * 0.2;
+        }
+      }
+
+      for (let y = 0; y < sh; y++) {
+        const i = (y * sw + x) * 4;
+        sImg.data[i] = r;
+        sImg.data[i + 1] = g;
+        sImg.data[i + 2] = b;
+        sImg.data[i + 3] = 255;
+      }
+    }
+
+    sCtx.putImageData(sImg, 0, 0);
+    waveErrorMsg.classList.add('hidden');
+
+  } catch (e) {
+    console.error(e);
+    waveErrorMsg.classList.remove('hidden');
+  }
+
+  requestAnimationFrame(animate);
+}
+
+init();
+</script>
+</body>
+</html>
